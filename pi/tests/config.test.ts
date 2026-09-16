@@ -156,4 +156,39 @@ describe("loadConfig", () => {
 		const { config } = loadConfig(configPath);
 		expect(config?.modes).toEqual({});
 	});
+
+	it("defaults a mode's thinking to \"hide\" when absent", () => {
+		writeConfig({ vault: "/v", core: ["a.md"], modes: { learn: { files: ["x.md"] } } });
+		const { config, notes } = loadConfig(configPath);
+		expect(config?.modes.learn.thinking).toBe("hide");
+		expect(notes).toEqual([]);
+	});
+
+	it("parses valid thinking values off and show", () => {
+		writeConfig({
+			vault: "/v",
+			core: ["a.md"],
+			modes: {
+				offMode: { files: ["x.md"], thinking: "off" },
+				showMode: { files: ["y.md"], thinking: "show" },
+				hideMode: { files: ["z.md"], thinking: "hide" },
+			},
+		});
+		const { config, notes } = loadConfig(configPath);
+		expect(config?.modes.offMode.thinking).toBe("off");
+		expect(config?.modes.showMode.thinking).toBe("show");
+		expect(config?.modes.hideMode.thinking).toBe("hide");
+		expect(notes).toEqual([]);
+	});
+
+	it("falls back to the default and notes on an invalid thinking value", () => {
+		writeConfig({
+			vault: "/v",
+			core: ["a.md"],
+			modes: { learn: { files: ["x.md"], thinking: "loud" } },
+		});
+		const { config, notes } = loadConfig(configPath);
+		expect(config?.modes.learn.thinking).toBe("hide");
+		expect(notes.some((n) => n.includes('invalid thinking value "loud"'))).toBe(true);
+	});
 });

@@ -11,12 +11,21 @@ export interface ProjectConfig {
 	memory?: string;
 }
 
+/** How a mode affects the model's thinking while it is active. */
+export type ThinkingSetting = "off" | "hide" | "show";
+
 export interface ModeConfig {
 	/**
 	 * Files relative to the vault root, injected compaction-proof for the whole
 	 * session while this mode is active. May be empty (mode injects nothing).
 	 */
 	files: string[];
+	/**
+	 * Thinking handling while this mode is active: "off" = set the session's
+	 * thinking level to off when the mode binds; "hide" = leave thinking on but
+	 * suppress its display; "show" = no change. Defaults to "hide".
+	 */
+	thinking?: ThinkingSetting;
 }
 
 export interface Config {

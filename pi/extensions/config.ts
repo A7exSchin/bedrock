@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { HOME, expandHome } from "./paths.js";
-import type { Config, LoadResult, ModeConfig, ProjectConfig } from "./types.js";
+import type { Config, LoadResult, ModeConfig, ProjectConfig, ThinkingSetting } from "./types.js";
 
 const AGENT_DIR = process.env.PI_CODING_AGENT_DIR ?? path.join(HOME, ".pi", "agent");
 export const CONFIG_PATH =
@@ -9,6 +9,12 @@ export const CONFIG_PATH =
 
 /** Subcommand names of /bedrock that a mode name must not shadow. */
 export const RESERVED_SUBCOMMANDS = ["status", "list", "add", "clear", "reload"] as const;
+
+/** Valid values for a mode's `thinking` setting. */
+const THINKING_SETTINGS: readonly ThinkingSetting[] = ["off", "hide", "show"];
+
+/** Default thinking handling for a mode that does not specify one. */
+export const DEFAULT_THINKING: ThinkingSetting = "hide";
 
 export function loadConfig(configPath: string = CONFIG_PATH): LoadResult {
 	const notes: string[] = [];
@@ -42,7 +48,17 @@ export function loadConfig(configPath: string = CONFIG_PATH): LoadResult {
 				const files = Array.isArray((value as any)?.files)
 					? (value as any).files.filter((f: unknown): f is string => typeof f === "string")
 					: [];
-				modes[name] = { files };
+				const rawThinking = (value as any)?.thinking;
+				let thinking: ThinkingSetting;
+				if (rawThinking === undefined) {
+					thinking = DEFAULT_THINKING;
+				} else if (typeof rawThinking === "string" && (THINKING_SETTINGS as readonly string[]).includes(rawThinking)) {
+					thinking = rawThinking as ThinkingSetting;
+				} else {
+					thinking = DEFAULT_THINKING;
+					notes.push(`Mode "${name}": invalid thinking value ${JSON.stringify(rawThinking)} — using default "hide".`);
+				}
+				modes[name] = { files, thinking };
 			}
 		}
 		const config: Config = {

@@ -1,5 +1,5 @@
 {
-  "_comment": "pi-bedrock config. core = always injected (relative to vault). projects = injected when cwd is inside their path; files/memory resolve from root (defaults to path). modes = session-bound behavioral context, keyed by name, activated with /bedrock <mode> on an empty session; files resolve relative to vault.",
+  "_comment": "pi-bedrock config. core = always injected (relative to vault). projects = injected when cwd is inside their path; files/memory resolve from root (defaults to path). modes = session-bound behavioral context, keyed by name, activated with /bedrock <mode> on an empty session; files resolve relative to vault. modes.<name>.thinking = \"off\"|\"hide\"|\"show\" (default \"hide\"): off = set the session thinking level to off on bind; hide = keep thinking on but suppress its display; show = no change.",
   "vault": "~/GitLib/dev.a7exschin.knowledge",
   "core": [
     "_core/me.md",
@@ -24,7 +24,8 @@
   ],
   "modes": {
     "learn": {
-      "files": ["03-agents/01-prompts/learning-mode.md"]
+      "files": ["03-agents/01-prompts/learning-mode.md"],
+      "thinking": "hide"
     }
   }
 }

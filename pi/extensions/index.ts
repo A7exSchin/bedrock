@@ -27,7 +27,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import type { ProjectConfig } from "./types.js";
-import { loadConfig, CONFIG_PATH, RESERVED_SUBCOMMANDS } from "./config.js";
+import { loadConfig, CONFIG_PATH, RESERVED_SUBCOMMANDS, DEFAULT_THINKING } from "./config.js";
 import { isInsidePath, shortenHome } from "./paths.js";
 import { readFile, readFiles, readMemoryDir, findMissingFiles } from "./files.js";
 import { formatSection } from "./format.js";
@@ -43,6 +43,36 @@ export default function piBedrock(pi: ExtensionAPI) {
 	let lastInjectionTokens: number | null = null;
 	/** Mode bound to this session (immutable once the first turn happens). */
 	let activeMode: string | null = null;
+	/** Thinking level before a mode set it to "off" — restored on re-bind while still empty. */
+	let savedThinkingLevel: string | null = null;
+
+	/** Apply a mode's thinking setting on bind (session-level changes only). */
+	function applyModeThinking(mode: string): void {
+		const mc = config?.modes[mode];
+		if (!mc) return;
+		const thinking = mc.thinking ?? DEFAULT_THINKING;
+		if (thinking === "off") {
+			if (savedThinkingLevel === null) savedThinkingLevel = pi.getThinkingLevel();
+			pi.setThinkingLevel("off");
+		} else if (savedThinkingLevel !== null) {
+			// Re-binding a non-"off" mode over an "off" one while still empty: undo.
+			pi.setThinkingLevel(savedThinkingLevel);
+			savedThinkingLevel = null;
+		}
+	}
+
+	/** True when the active mode suppresses the thinking display ("hide"). */
+	function thinkingHidden(): boolean {
+		if (!config || !activeMode) return false;
+		const mc = config.modes[activeMode];
+		return !!mc && (mc.thinking ?? DEFAULT_THINKING) === "hide";
+	}
+
+	pi.registerMarkdownTransformer((markdown, { messageType }) => {
+		if (messageType !== "assistant-thinking") return markdown;
+		if (!thinkingHidden()) return markdown;
+		return "";
+	});
 
 	function reload(): void {
 		({ config, warn, notes } = loadConfig());
@@ -376,6 +406,7 @@ export default function piBedrock(pi: ExtensionAPI) {
 					for (const name of modeNames) {
 						const isActive = activeMode === name;
 						const files = config.modes[name].files;
+						const thinking = config.modes[name].thinking ?? DEFAULT_THINKING;
 						let modeTokens = 0;
 						const fileLines: string[] = [];
 						for (const rel of files) {
@@ -387,7 +418,7 @@ export default function piBedrock(pi: ExtensionAPI) {
 							fileLines.push(`      ${indicator} ${rel}${exists ? ` (${formatTokens(tokens)})` : ""}`);
 						}
 						lines.push(
-							`  ${isActive ? "●" : "○"} ${name}${isActive ? " — ACTIVE" : ""} (${files.length} file(s), ${formatTokens(modeTokens)})`,
+							`  ${isActive ? "●" : "○"} ${name}${isActive ? " — ACTIVE" : ""} (${files.length} file(s), ${formatTokens(modeTokens)}) · thinking: ${thinking}`,
 						);
 						lines.push(...fileLines);
 					}
@@ -428,16 +459,24 @@ export default function piBedrock(pi: ExtensionAPI) {
 				// Empty session: bind (re-binding while still empty overwrites the choice)
 				activeMode = sub;
 				pi.appendEntry(MODE_ENTRY_TYPE, { mode: sub });
+				applyModeThinking(sub);
 				showStatus(ctx);
 				const fileCount = config.modes[sub].files.length;
+				const thinking = config.modes[sub].thinking ?? DEFAULT_THINKING;
+				const thinkingNote =
+					thinking === "off"
+						? " Thinking level set to off for this session."
+						: thinking === "hide"
+							? " Thinking display is hidden while this mode is active."
+							: "";
 				if (fileCount === 0) {
 					ctx.ui.notify(
-						`pi-bedrock: mode "${sub}" bound to this session, but it has no files — nothing will be injected.`,
+						`pi-bedrock: mode "${sub}" bound to this session, but it has no files — nothing will be injected.${thinkingNote}`,
 						"warning",
 					);
 				} else {
 					ctx.ui.notify(
-						`pi-bedrock: mode "${sub}" bound to this session (${fileCount} file(s)). Locked after the first turn.`,
+						`pi-bedrock: mode "${sub}" bound to this session (${fileCount} file(s)). Locked after the first turn.${thinkingNote}`,
 						"info",
 					);
 				}

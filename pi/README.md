@@ -52,7 +52,8 @@ older `PI_BEDROCK_CONFIG` still works as a fallback).
   ],
   "modes": {
     "learn": {
-      "files": ["03-agents/01-prompts/learning-mode.md"]
+      "files": ["03-agents/01-prompts/learning-mode.md"],
+      "thinking": "hide"
     }
   }
 }
@@ -70,6 +71,7 @@ older `PI_BEDROCK_CONFIG` still works as a fallback).
 | `projects[].memory` | no | Directory relative to `root` (or `path`); all `.md` files injected. |
 | `modes` | no | Session modes keyed by name (see below). |
 | `modes.<name>.files` | yes | Files (relative to `vault`) injected while the mode is active. May be empty (injects nothing). A mode name must not shadow a reserved subcommand (`status`, `list`, `add`, `clear`, `reload`). |
+| `modes.<name>.thinking` | no | Thinking handling while the mode is active: `"off"` = set the session thinking level to off when the mode binds; `"hide"` = thinking stays on but its display is suppressed; `"show"` = no change. **Defaults to `"hide"`.** |
 
 ## Modes
 
@@ -85,6 +87,12 @@ Semantics:
 - After the **first turn**, the mode is **locked** for the session's lifetime — there is no deactivation.
 - On a session that already has history, activation is refused; start a fresh session with `/new`, then bind the mode.
 - The bound mode is stored as a session entry (not in LLM context) and restored on `/reload` and `/resume`.
+- A mode may configure how the model's thinking is handled via `modes.<name>.thinking`:
+  - `"off"` — `pi.setThinkingLevel("off")` is called when the mode binds; no reasoning tokens are spent and nothing is displayed. On resume, pi restores the recorded level from session history. Re-binding a non-`off` mode while the session is still empty restores the pre-bind level.
+  - `"hide"` (default) — the model still thinks, but a display-only markdown transformer suppresses `assistant-thinking` blocks while the mode is active. Thinking still costs tokens.
+  - `"show"` — explicit opt-out of the default; thinking is displayed as usual.
+
+  Modes that omit `thinking` default to `"hide"`, so any bound mode suppresses the thinking display unless it explicitly opts out.
 
 ## Commands
 
