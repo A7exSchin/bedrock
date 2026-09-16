@@ -46,6 +46,11 @@ One difference from pi-bedrock: a project's `memory` directory is scanned for
 modified, and the 8 most recent are inlined in full. Adjust `MEMORY_FILE_CAP`
 in `scripts/bedrock.js` if you want a different cutoff.
 
+Another difference: `modes.<name>.thinking` is a no-op on the Claude Code
+side. Claude Code does not expose the model's thinking, so the field is
+accepted in the shared config but has nothing to control here — the Pi
+implementation is its only consumer.
+
 ## Setup
 
 ```bash
