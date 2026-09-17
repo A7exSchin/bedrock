@@ -1,6 +1,6 @@
 {
   "name": "pi-bedrock",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Compaction-proof context injection for pi — vault core files, project-scoped files, ephemeral notes in the system prompt.",
   "keywords": [
     "pi-package"

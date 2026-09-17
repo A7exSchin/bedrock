@@ -61,11 +61,23 @@ export function loadConfig(configPath: string = CONFIG_PATH): LoadResult {
 				modes[name] = { files, thinking };
 			}
 		}
+		const rawTimestamps = parsed.timestamps;
+		let timestamps = true;
+		if (rawTimestamps === undefined) {
+			timestamps = true;
+		} else if (typeof rawTimestamps === "boolean") {
+			timestamps = rawTimestamps;
+		} else {
+			notes.push(
+				`Invalid timestamps value ${JSON.stringify(rawTimestamps)} — using default true.`,
+			);
+		}
 		const config: Config = {
 			vault: expandHome(parsed.vault),
 			core: parsed.core,
 			projects,
 			modes,
+			timestamps,
 		};
 		return { config, warn: null, notes };
 	} catch (e: any) {

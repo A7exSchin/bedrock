@@ -7,7 +7,7 @@ context that matters. Two implementations, one per tool, sharing a single config
 | | [`pi/`](pi/) | [`claude-code/`](claude-code/) |
 |---|---|---|
 | Tool | [Pi](https://github.com/earendil-works/pi) | [Claude Code](https://claude.com/product/claude-code) |
-| Mechanism | `before_agent_start` hook, re-injects every turn | `SessionStart` hook, injects on `startup`/`resume`/`clear`/`fork`/`compact` |
+| Mechanism | `before_agent_start` hook, re-injects every turn | `SessionStart` hook (injects on `startup`/`resume`/`clear`/`fork`/`compact`) + `UserPromptSubmit` hook (per-turn timestamp) |
 | Config env var | `BEDROCK_CONFIG` (`PI_BEDROCK_CONFIG` still works as a fallback) | same `BEDROCK_CONFIG` (`CLAUDE_BEDROCK_CONFIG`/`PI_BEDROCK_CONFIG` still work as fallbacks) |
 
 Both point at the same `pi-bedrock.json` file — set `BEDROCK_CONFIG` once and both tools

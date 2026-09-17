@@ -11,6 +11,8 @@
  *     Each project can optionally have a memory directory (all .md files scanned).
  *   - Ephemeral context: session-scoped strings added via /bedrock add.
  *   - Re-reads files from disk on every turn (always fresh, no stale rules).
+ *   - Turn timestamps: a per-turn timestamp marker so the model always knows
+ *     the current date/time (config `timestamps`, default on).
  *   - Warns on startup if context files overlap with already-loaded AGENTS.md.
  *
  * Config: ~/.pi/agent/pi-bedrock.json (override via BEDROCK_CONFIG env; PI_BEDROCK_CONFIG
@@ -31,6 +33,7 @@ import { loadConfig, CONFIG_PATH, RESERVED_SUBCOMMANDS, DEFAULT_THINKING } from 
 import { isInsidePath, shortenHome } from "./paths.js";
 import { readFile, readFiles, readMemoryDir, findMissingFiles } from "./files.js";
 import { formatSection } from "./format.js";
+import { formatTimestamp } from "./time.js";
 import { estimateTokens, formatTokens } from "./tokens.js";
 
 /** Custom session-entry type used to persist the bound mode across reload/resume. */
@@ -258,21 +261,35 @@ export default function piBedrock(pi: ExtensionAPI) {
 			);
 		}
 
-		if (sections.length === 0) {
-			lastInjectionTokens = 0;
-			return undefined;
+		const result: {
+			message?: { customType: string; content: string; display: boolean };
+			systemPrompt?: string;
+		} = {};
+
+		// Per-turn timestamp: a persistent session entry sent to the LLM, so the
+		// model sees when each turn happened (and always the current date/time).
+		if (config.timestamps) {
+			result.message = {
+				customType: "bedrock-time",
+				content: `Current time: ${formatTimestamp(new Date())}`,
+				display: false,
+			};
 		}
 
-		const injection =
-			"\n\n<!-- pi-bedrock: injected rules (compaction-proof) -->\n" +
-			sections.join("\n") +
-			"\n<!-- /pi-bedrock -->\n";
+		if (sections.length === 0) {
+			lastInjectionTokens = 0;
+		} else {
+			const injection =
+				"\n\n<!-- pi-bedrock: injected rules (compaction-proof) -->\n" +
+				sections.join("\n") +
+				"\n<!-- /pi-bedrock -->\n";
 
-		lastInjectionTokens = estimateTokens(injection);
+			lastInjectionTokens = estimateTokens(injection);
+			result.systemPrompt = event.systemPrompt + injection;
+		}
 
-		return {
-			systemPrompt: event.systemPrompt + injection,
-		};
+		if (!result.message && !result.systemPrompt) return undefined;
+		return result;
 	});
 
 	pi.registerCommand("bedrock", {
@@ -329,6 +346,7 @@ export default function piBedrock(pi: ExtensionAPI) {
 				const lines: string[] = [];
 
 				lines.push(`vault: ${shortenHome(config.vault)}`);
+				lines.push(`turn timestamps: ${config.timestamps ? "on" : "off"}`);
 				if (lastInjectionTokens !== null) {
 					lines.push(`total injection: ${formatTokens(lastInjectionTokens)}`);
 				}
@@ -507,6 +525,7 @@ export default function piBedrock(pi: ExtensionAPI) {
 					`${config.projects.length ? `, ${config.projects.length} project(s) (${activeProjects.length} active)` : ""}` +
 					`${ephemeralContext.length ? `, ${ephemeralContext.length} ephemeral` : ""}` +
 					`${activeMode ? `, mode: ${activeMode}` : ""}` +
+					`, timestamps ${config.timestamps ? "on" : "off"}` +
 					`. Vault: ${config.vault}. Source: ${CONFIG_PATH}.`,
 				"info",
 			);

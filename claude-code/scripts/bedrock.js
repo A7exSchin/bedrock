@@ -11,6 +11,24 @@ const os = require('os');
 
 const MEMORY_FILE_CAP = 8;
 
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+// "Tuesday, 7.7.2026, 14:32 (UTC+02:00)" — matches the pi extension's format.
+function formatTimestamp(now) {
+  const offset = -now.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const abs = Math.abs(offset);
+  const tz = `UTC${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  return (
+    `${WEEKDAYS[now.getDay()]}, ${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()}, ` +
+    `${pad(now.getHours())}:${pad(now.getMinutes())} (${tz})`
+  );
+}
+
 function expandHome(p) {
   if (!p) return p;
   if (p === '~') return os.homedir();
@@ -145,6 +163,7 @@ function renderList(config, cwd, state, configPath) {
     '',
     `Config: ${configPath}`,
     `Vault: ${expandHome(config.vault)}`,
+    `Turn timestamps: ${config.timestamps === false ? 'off' : 'on'}`,
     '',
   ];
   const tiers = buildTiers(config, cwd, state);
@@ -190,6 +209,14 @@ function main() {
     return;
   }
 
+  if (cmd === 'time') {
+    // UserPromptSubmit hook: stdout is added to context for this turn. Stay
+    // silent when there is no config or timestamps are disabled — never pollute.
+    if (!config || config.timestamps === false) return;
+    process.stdout.write(`Current time: ${formatTimestamp(new Date())}\n`);
+    return;
+  }
+
   if (!config) {
     console.log(
       'No bedrock config found. Checked BEDROCK_CONFIG, CLAUDE_BEDROCK_CONFIG, PI_BEDROCK_CONFIG, ' +
@@ -209,6 +236,7 @@ function main() {
     console.log(`Active tiers: ${tiers.map((t) => t.label).join(', ') || 'none'}`);
     console.log(`Active files: ${activeFiles}`);
     console.log(`Bound mode: ${state.mode || 'none'}`);
+    console.log(`Turn timestamps: ${config.timestamps === false ? 'off' : 'on'}`);
     console.log(`Session notes: ${state.ephemeral.length}`);
     return;
   }

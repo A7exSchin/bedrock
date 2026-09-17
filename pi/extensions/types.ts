@@ -41,6 +41,11 @@ export interface Config {
 	 * session. Files resolve relative to `vault`.
 	 */
 	modes: Record<string, ModeConfig>;
+	/**
+	 * When true (the default), a per-turn timestamp is injected into the session
+	 * so the model always knows the current date/time and when each turn happened.
+	 */
+	timestamps: boolean;
 }
 
 export interface LoadedFile {

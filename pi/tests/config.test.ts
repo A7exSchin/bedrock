@@ -191,4 +191,24 @@ describe("loadConfig", () => {
 		expect(config?.modes.learn.thinking).toBe("hide");
 		expect(notes.some((n) => n.includes('invalid thinking value "loud"'))).toBe(true);
 	});
+
+	it("defaults timestamps to true when absent", () => {
+		writeConfig({ vault: "/v", core: ["a.md"] });
+		const { config, notes } = loadConfig(configPath);
+		expect(config?.timestamps).toBe(true);
+		expect(notes).toEqual([]);
+	});
+
+	it("parses an explicit timestamps boolean", () => {
+		writeConfig({ vault: "/v", core: ["a.md"], timestamps: false });
+		const { config } = loadConfig(configPath);
+		expect(config?.timestamps).toBe(false);
+	});
+
+	it("falls back to true and notes on an invalid timestamps value", () => {
+		writeConfig({ vault: "/v", core: ["a.md"], timestamps: "yes" });
+		const { config, notes } = loadConfig(configPath);
+		expect(config?.timestamps).toBe(true);
+		expect(notes.some((n) => n.includes("Invalid timestamps value"))).toBe(true);
+	});
 });

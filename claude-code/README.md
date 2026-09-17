@@ -14,7 +14,8 @@ this plugin uses a `SessionStart` hook. `SessionStart` fires on `startup`,
 so context is refreshed exactly when it would otherwise be lost, not on every
 message. This is cheaper in tokens and needs no manual re-injection logic.
 
-- `hooks/hooks.json` — registers `scripts/bedrock.js hook` on `SessionStart`.
+- `hooks/hooks.json` — registers `scripts/bedrock.js hook` on `SessionStart`, and
+  `scripts/bedrock.js time` on `UserPromptSubmit` (per-turn timestamps, see below).
 - `scripts/bedrock.js` — the only piece of logic. Reads the config, resolves
   which tiers apply to the current `cwd`, and either prints markdown (`hook`,
   `reload`) or a status report (`status`, `list`).
@@ -50,6 +51,16 @@ Another difference: `modes.<name>.thinking` is a no-op on the Claude Code
 side. Claude Code does not expose the model's thinking, so the field is
 accepted in the shared config but has nothing to control here — the Pi
 implementation is its only consumer.
+
+## Turn timestamps
+
+Both plugins make the model time-aware on every turn. `hooks.json` registers a
+`UserPromptSubmit` hook: whenever the user submits a prompt, Claude Code runs
+`bedrock.js time`, and its stdout — `Current time: Tuesday, 7.7.2026, 14:32
+(UTC+02:00)` — is added to the context for that turn, in the same dotted-date
+format as the Pi extension. The shared `"timestamps"` config field (default
+`true`) turns this off on both sides; when disabled or when no config exists,
+the hook stays silent and never pollutes the context.
 
 ## Setup
 

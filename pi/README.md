@@ -26,6 +26,8 @@ pi-bedrock hooks `before_agent_start` and re-reads its configured files from dis
 - **Modes** — a named, session-bound behavioral context. A mode is activated with `/bedrock <mode>` on an **empty session** and is **immutable once the first turn happens** — it cannot be switched or deactivated for that session. The bound mode is persisted in the session, so it survives `/reload` and `/resume`. Its files resolve relative to `vault`.
 - **Ephemeral** — session-scoped strings added at runtime via `/bedrock add`, cleared with `/bedrock clear`.
 
+On top of the file tiers, every turn gets a **timestamp marker** — a small hidden session entry like `Current time: Tuesday, 7.7.2026, 14:32 (UTC+02:00)` injected via `before_agent_start`. The markers persist in the session, so the model always knows the current date/time and can see when each turn happened. Disable with `"timestamps": false` in the config.
+
 On `session_start` it also warns if any injected file is already loaded via `AGENTS.md`/context files, to avoid double token usage.
 
 ## Config
@@ -55,7 +57,8 @@ older `PI_BEDROCK_CONFIG` still works as a fallback).
       "files": ["03-agents/01-prompts/learning-mode.md"],
       "thinking": "hide"
     }
-  }
+  },
+  "timestamps": true
 }
 ```
 
@@ -72,6 +75,7 @@ older `PI_BEDROCK_CONFIG` still works as a fallback).
 | `modes` | no | Session modes keyed by name (see below). |
 | `modes.<name>.files` | yes | Files (relative to `vault`) injected while the mode is active. May be empty (injects nothing). A mode name must not shadow a reserved subcommand (`status`, `list`, `add`, `clear`, `reload`). |
 | `modes.<name>.thinking` | no | Thinking handling while the mode is active: `"off"` = set the session thinking level to off when the mode binds; `"hide"` = thinking stays on but its display is suppressed; `"show"` = no change. **Defaults to `"hide"`.** |
+| `timestamps` | no | Turn timestamps: when `true` (the default), a per-turn timestamp marker is injected into the session so the model always knows the current date/time. Set `false` to disable.
 
 ## Modes
 
